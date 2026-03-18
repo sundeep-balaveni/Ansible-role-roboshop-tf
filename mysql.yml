@@ -1,3 +1,4 @@
+---
 - name: Install MySQL server
   hosts: mysql
   become: yes
@@ -9,18 +10,20 @@
 
     - name: Add MySQL 8 official repo
       ansible.builtin.get_url:
-        url: https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm
-        dest: /tmp/mysql80-community-release-el7-3.noarch.rpm
+        url: https://dev.mysql.com/get/mysql84-community-release-el9-1.noarch.rpm
+        dest: /tmp/mysql84-community-release-el9-1.noarch.rpm
 
     - name: Install MySQL repo package
       ansible.builtin.dnf:
-        name: /tmp/mysql80-community-release-el7-3.noarch.rpm
+        name: /tmp/mysql84-community-release-el9-1.noarch.rpm
         state: present
+        disable_gpg_check: yes
 
     - name: Install MySQL server
       ansible.builtin.dnf:
         name: mysql-community-server
         state: present
+        disable_gpg_check: yes
 
     - name: Start MySQL service
       ansible.builtin.service:
@@ -33,9 +36,21 @@
         name: python3-PyMySQL
         state: present
 
+    - name: Get temporary root password
+      ansible.builtin.shell: grep 'temporary password' /var/log/mysqld.log | awk '{print $NF}'
+      register: temp_password
+
     - name: Set root password
-      community.mysql.mysql_user:
-        name: root
-        host: localhost
-        password: "{{ mysql_root_password }}"
-        login_unix_socket: /var/lib/mysql/mysql.sock
+      ansible.builtin.shell: |
+        mysql --connect-expired-password -u root -p"{{ temp_password.stdout }}" \
+        -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ mysql_root_password }}';"
+
+    - name: Create application user
+      ansible.builtin.shell: |
+        mysql -u root -p"{{ mysql_root_password }}" \
+        -e "CREATE USER IF NOT EXISTS 'roboshop'@'%' IDENTIFIED BY 'RoboShop@1';"
+
+    - name: Grant privileges to application user
+      ansible.builtin.shell: |
+        mysql -u root -p"{{ mysql_root_password }}" \
+        -e "GRANT ALL PRIVILEGES ON *.* TO 'roboshop'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;"
