@@ -8,14 +8,9 @@
 
   tasks:
 
-    - name: Download MySQL 8 repo
-      ansible.builtin.get_url:
-        url: https://repo.mysql.com/mysql80-community-release-el7-7.noarch.rpm
-        dest: /tmp/mysql80-community-release-el7.rpm
-
-    - name: Install MySQL repo
+    - name: Install MySQL repo directly
       ansible.builtin.dnf:
-        name: /tmp/mysql80-community-release-el7.rpm
+        name: https://repo.mysql.com/mysql80-community-release-el7-7.noarch.rpm
         state: present
         disable_gpg_check: yes
 
