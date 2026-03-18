@@ -53,4 +53,8 @@
     - name: Grant privileges to application user
       ansible.builtin.shell: |
         mysql -u root -p"{{ mysql_root_password }}" \
-        -e "GRANT ALL PRIVILEGES ON *.* TO 'roboshop'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+        -e "GRANT ALL PRIVILEGES ON *.* TO 'roboshop'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES and;"
+
+
+
+  
