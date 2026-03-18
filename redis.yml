@@ -6,7 +6,7 @@
   tasks:
 
   - name: Update apt cache
-    ansible.builtin.apt:
+    ansible.builtin.dnf:
       update_cache: yes
 
   - name: Update apt cache
@@ -14,7 +14,7 @@
       
 
   - name: installing redis package
-    ansible.builtin.apt:
+    ansible.builtin.dnf:
       name: redis-server
       state : present
 
