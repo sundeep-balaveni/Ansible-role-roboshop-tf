@@ -1,4 +1,4 @@
-- name: installing mysql server
+- name: Install MySQL server
   hosts: mysql
   become: yes
 
@@ -7,9 +7,19 @@
 
   tasks:
 
+    - name: Add MySQL 8 official repo
+      ansible.builtin.get_url:
+        url: https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm
+        dest: /tmp/mysql80-community-release-el7-3.noarch.rpm
+
+    - name: Install MySQL repo package
+      ansible.builtin.dnf:
+        name: /tmp/mysql80-community-release-el7-3.noarch.rpm
+        state: present
+
     - name: Install MySQL server
       ansible.builtin.dnf:
-        name: mysql-server
+        name: mysql-community-server
         state: present
 
     - name: Start MySQL service
@@ -18,7 +28,7 @@
         state: started
         enabled: yes
 
-    - name: Install PyMySQL dependency
+    - name: Install Python MySQL library
       ansible.builtin.dnf:
         name: python3-PyMySQL
         state: present
