@@ -1,0 +1,31 @@
+- name: installing mysql server
+  hosts: mysql
+  become: yes
+
+  vars:
+    mysql_root_password: "RoboShop@1"
+
+  tasks:
+
+    - name: Install MySQL server
+      ansible.builtin.dnf:
+        name: mysql-server
+        state: present
+
+    - name: Start MySQL service
+      ansible.builtin.service:
+        name: mysqld
+        state: started
+        enabled: yes
+
+    - name: Install PyMySQL dependency
+      ansible.builtin.dnf:
+        name: python3-PyMySQL
+        state: present
+
+    - name: Set root password
+      community.mysql.mysql_user:
+        name: root
+        host: localhost
+        password: "{{ mysql_root_password }}"
+        login_unix_socket: /var/lib/mysql/mysql.sock
