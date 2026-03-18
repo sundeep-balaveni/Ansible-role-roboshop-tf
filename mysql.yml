@@ -7,7 +7,8 @@
     mysql_root_password: "RoboShop@1"
 
   tasks:
-    - name: Add MySQL 8 repo
+
+    - name: Download MySQL 8 repo
       ansible.builtin.get_url:
         url: https://repo.mysql.com/mysql80-community-release-el7-7.noarch.rpm
         dest: /tmp/mysql80-community-release-el7.rpm
@@ -16,6 +17,9 @@
       ansible.builtin.dnf:
         name: /tmp/mysql80-community-release-el7.rpm
         state: present
+
+    - name: Disable default MySQL module
+      ansible.builtin.command: dnf module disable mysql -y
 
     - name: Install MySQL server
       ansible.builtin.dnf:
@@ -40,7 +44,7 @@
         name: python3-PyMySQL
         state: present
 
-    - name: Install MySQL python dependency (optional but safe)
+    - name: Install boto dependencies
       ansible.builtin.pip:
         name:
           - boto3
