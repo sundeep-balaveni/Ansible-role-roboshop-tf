@@ -1,35 +1,23 @@
 ---
-- name: Install MongoDB 7.0 on Ubuntu
+- name: Install MongoDB 7.0 on Amazon Linux
   hosts: mongodb
   become: yes
 
-  vars:
-    ansible_python_interpreter: /usr/bin/python3
-
   tasks:
 
-    - name: Install required packages
-      ansible.builtin.apt:
-        name:
-          - gnupg
-          - curl
-        state: present
-        update_cache: yes
-
-    - name: Add MongoDB GPG key
-      ansible.builtin.shell: |
-        curl -fsSL https://pgp.mongodb.com/server-7.0.asc \
-        | gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg
-      args:
-        creates: /usr/share/keyrings/mongodb-server-7.0.gpg
-
     - name: Add MongoDB repository
-      ansible.builtin.apt_repository:
-        repo: "deb [ signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse"
-        state: present
+      ansible.builtin.copy:
+        dest: /etc/yum.repos.d/mongodb-org-7.0.repo
+        content: |
+          [mongodb-org-7.0]
+          name=MongoDB Repository
+          baseurl=https://repo.mongodb.org/yum/redhat/9/mongodb-org/7.0/x86_64/
+          gpgcheck=1
+          enabled=1
+          gpgkey=https://pgp.mongodb.com/server-7.0.asc
 
     - name: Install MongoDB
-      ansible.builtin.apt:
+      ansible.builtin.dnf:
         name: mongodb-org
         state: present
         update_cache: yes
