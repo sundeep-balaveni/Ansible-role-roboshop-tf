@@ -17,6 +17,7 @@
       ansible.builtin.dnf:
         name: /tmp/mysql80-community-release-el7.rpm
         state: present
+        disable_gpg_check: yes
 
     - name: Disable default MySQL module
       ansible.builtin.command: dnf module disable mysql -y
