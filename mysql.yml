@@ -8,48 +8,24 @@
 
   tasks:
 
-    - name: Install MySQL repo directly
-      ansible.builtin.dnf:
-        name: https://repo.mysql.com/mysql80-community-release-el7-7.noarch.rpm
-        state: present
-        disable_gpg_check: yes
+    - name: install MySQL server
+  ansible.builtin.dnf:
+    name: mysql-server
+    state: present
 
-    - name: Disable default MySQL module
-      ansible.builtin.command: dnf module disable mysql -y
+- name: start and enable mysql server
+  ansible.builtin.service:
+    name: mysqld
+    state: restarted
+    enabled: yes
 
-    - name: Install MySQL server
-      ansible.builtin.dnf:
-        name: mysql-community-server
-        state: present
+- name: install botocore and boto3
+  ansible.builtin.pip:
+    name: "{{ item }}"
+    executable: pip3.9
+  loop:
+  - boto3
+  - botocore
 
-    - name: Start MySQL service
-      ansible.builtin.service:
-        name: mysqld
-        state: started
-        enabled: yes
-
-    - name: Wait for MySQL
-      ansible.builtin.wait_for:
-        port: 3306
-        host: 127.0.0.1
-        delay: 5
-        timeout: 60
-
-    - name: Install PyMySQL
-      ansible.builtin.dnf:
-        name: python3-PyMySQL
-        state: present
-
-    - name: Install boto dependencies
-      ansible.builtin.pip:
-        name:
-          - boto3
-          - botocore
-        executable: pip3
-
-    - name: Set root password
-      community.mysql.mysql_user:
-        name: root
-        host: localhost
-        password: "{{ mysql_root_password }}"
-        login_unix_socket: /var/lib/mysql/mysql.sock
+- name: setup root password
+  ansible.builtin.command: mysql_secure_installation --set-root-pass "{{ MYSQL_ROOT_PASSWORD }}"
