@@ -4,7 +4,7 @@
   become: yes
 
   vars:
-    mysql_root_password: "RoboShop@1"
+    mysql_root_password: "{{ lookup('aws_ssm', 'Roboshop-MySQL-password') }}"
 
   tasks:
 
@@ -22,7 +22,7 @@
     - name: install botocore and boto3
       ansible.builtin.pip:
         name: "{{ item }}"
-        executable: pip3.9
+        executable: pip3.9                                         #if you want any specific version of python then use this otherwise remove 
       loop:
         - boto3
         - botocore
