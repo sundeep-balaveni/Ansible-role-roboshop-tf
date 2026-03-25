@@ -2,170 +2,96 @@
   hosts: catalouge
   become: yes
 
-
   tasks:
-    - name: creating the file
+
+    - name: Create test file
       ansible.builtin.file:
         path: /home/test-file
         state: touch
 
-    - name: installing specific version file     ##downloads the scrips
-      ansible.builtin.command: curl -sL https://deb.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh
-      
-    
-    - name: Run NodeJS 20 setup script         ##runs the script
-      ansible.builtin.command: bash /tmp/nodesource_setup.sh
-      become: yes
+    # ---------------- NODEJS ----------------
 
-    - name: Install NodeJS 20                     
+    - name: Setup NodeJS 20 repo
+      ansible.builtin.shell: curl -sL https://rpm.nodesource.com/setup_20.x | bash -
+      args:
+        creates: /etc/yum.repos.d/nodesource*.repo
+
+    - name: Install NodeJS
       ansible.builtin.dnf:
         name: nodejs
         state: present
-        
-        
 
+    # ---------------- USER ----------------
 
-    
-        
-
-
-
-
-    # ---------- enabling disabling wont work in ansible ubuntu ---------------
-
-    # - name: disabling the defalut nodejs
-    #   ansible.builtin.command: apt disable nodejs -y
-
-    # - name: enabling the defalut nodejs
-    #   ansible.builtin.command: apt enable nodejs:20 -y
-
-#--------------------------------------------------------------------------------
-
-  
-
-    - name: Creating the system user
-      ansible.builtin.user  :
+    - name: Create roboshop user
+      ansible.builtin.user:
         name: roboshop
         system: yes
         home: /app
-        shell : /sbin/nologin    #expictly prevents user to login 
-        comment : "System user"
+        shell: /sbin/nologin
 
-
-    - name: Create a directory if it does not exist
+    - name: Create /app directory
       ansible.builtin.file:
         path: /app
         state: directory
-        mode : '0755'
-        
+        mode: '0755'
 
-    - name: Download catalogue zip using curl
-      ansible.builtin.command: curl -sL https://roboshop-artifacts.s3.amazonaws.com/catalogue-v3.zip -o /tmp/catalogue-v3.zip
-      become: yes
+    # ---------------- APP SETUP ----------------
 
+    - name: Download catalogue zip
+      ansible.builtin.get_url:
+        url: https://roboshop-artifacts.s3.amazonaws.com/catalogue-v3.zip
+        dest: /tmp/catalogue.zip
 
-
-    - name: installing unzip package   
+    - name: Install unzip
       ansible.builtin.dnf:
         name: unzip
         state: present
 
-    - name: unzipping the package into /app  #unacheive comes from unzip
+    - name: Unzip catalogue
       ansible.builtin.unarchive:
-        src: /tmp/catalogue-v3.zip
+        src: /tmp/catalogue.zip
         dest: /app
         remote_src: yes
-        
-    
-    - name: installing npm packages
+
+    - name: Install npm dependencies
       ansible.builtin.npm:
         path: /app
-        state: present
 
-    - name: Create a directory if it does not exist
-      ansible.builtin.file:
-        name: catalogue.service
-        path: /etc/systemd/system
-        state: directory
+    # ---------------- SYSTEMD ----------------
 
-    - name: Copy the systemd service file
+    - name: Copy systemd service file
       ansible.builtin.copy:
-        src: catalouge.service                              # file on control node
+        src: catalouge.service
         dest: /etc/systemd/system/catalogue.service
-        owner: root
 
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: yes
 
-    - name: daemon_reload
-      ansible.builtin.systemd_service:
-        daemon_reload: true
-        
-
-    - name: enabling the catalogue
-      ansible.builtin.service:
-        name: catalogue.service
+    - name: Start catalogue service
+      ansible.builtin.systemd:
+        name: catalogue
         state: started
         enabled: yes
 
+    # ---------------- MONGODB CLIENT ----------------
 
-    ##########################################chat-gpt ####################3
-
-
-
-
-
-    - name: Ensure gnupg and curl are installed
-      ansible.builtin.dnf:
-        name:
-          - gnupg
-          - curl
-        state: present
-        update_cache: true
-
-    - name: Copy MongoDB GPG key from control node
+    - name: Create MongoDB repo file
       ansible.builtin.copy:
-        src: files/mongodb-server-7.0.asc
-        dest: /tmp/mongodb-server-7.0.asc
-        mode: '0644'
+        dest: /etc/yum.repos.d/mongodb-org-7.0.repo
+        content: |
+          [mongodb-org-7.0]
+          name=MongoDB Repository
+          baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/7.0/x86_64/
+          gpgcheck=1
+          enabled=1
+          gpgkey=https://www.mongodb.org/static/pgp/server-7.0.asc
 
-
-    - name: Convert MongoDB GPG key to keyring
-      ansible.builtin.shell: cat /tmp/mongodb-server-7.0.asc | gpg --dearmor --output /usr/share/keyrings/mongodb-server-7.0.gpg
-      args:
-        creates: /usr/share/keyrings/mongodb-server-7.0.gpg
-
-    - name: Add MongoDB repository
-      ansible.builtin.apt_repository:
-        repo: "deb [ signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse"
-        state: present
-
-    - name: Install mongosh using apt
+    - name: Install mongosh
       ansible.builtin.dnf:
         name: mongodb-mongosh
         state: present
-        update_cache: true
 
-    - name: load the mongodb data
+    - name: Load MongoDB data
       ansible.builtin.shell: mongosh --host mongodb-prod.sndp.online </app/db/master-data.js
-      become: yes
-      tags: mongo
-
-  
-
-
-
-    
-
-
-    
-      
-
-     
-
-
-  
-
-    
-
-    
-
-    
