@@ -91,7 +91,7 @@
 
     - name: Copy systemd service file
       ansible.builtin.copy:
-        src: files/catalogue.service
+        src: catalouge.service
         dest: /etc/systemd/system/catalogue.service
 
     - name: Reload systemd
