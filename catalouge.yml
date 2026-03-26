@@ -86,7 +86,7 @@
     - name: Clean catalogue database
       ansible.builtin.shell: |
         
-         mongosh "mongodb://mongodb-prod.sndp.online:27017/catalogue" --eval 'db.products.drop()'
+        mongosh "mongodb://mongodb-prod.sndp.online:27017/catalogue" --eval 'db.products.drop()'
 
     - name: Load MongoDB data
       ansible.builtin.shell: |
