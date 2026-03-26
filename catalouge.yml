@@ -5,7 +5,6 @@
   tasks:
 
     # ---------------- FIX SSL (CRITICAL) ----------------
-
     - name: Fix crypto policies (prevents SSL error)
       ansible.builtin.shell: |
         update-crypto-policies --set DEFAULT
@@ -14,7 +13,6 @@
         executable: /bin/bash
 
     # ---------------- NODEJS ----------------
-
     - name: Setup NodeJS 20 repo
       ansible.builtin.shell: curl -sL https://rpm.nodesource.com/setup_20.x | bash -
       args:
@@ -26,7 +24,6 @@
         state: present
 
     # ---------------- USER ----------------
-
     - name: Create roboshop user
       ansible.builtin.user:
         name: roboshop
@@ -43,7 +40,6 @@
         mode: '0755'
 
     # ---------------- APP SETUP ----------------
-
     - name: Download catalogue zip
       ansible.builtin.get_url:
         url: https://roboshop-artifacts.s3.amazonaws.com/catalogue-v3.zip
@@ -65,7 +61,6 @@
         path: /app
 
     # ---------------- MONGODB CLIENT ----------------
-
     - name: Create MongoDB repo file
       ansible.builtin.copy:
         dest: /etc/yum.repos.d/mongodb-org-7.0.repo
@@ -81,25 +76,26 @@
         name: mongodb-mongosh
         state: present
 
-
-
     - name: Clean catalogue database
-      ansible.builtin.shell: |
-        
-        mongosh "mongodb://mongodb-prod.sndp.online:27017/catalogue" --eval 'db.products.drop()'
+      ansible.builtin.shell: >
+        mongosh "mongodb://mongodb-prod.sndp.online:27017/catalogue" --eval "db.products.drop()"
+      args:
+        executable: /bin/bash
 
     - name: Load MongoDB data
-      ansible.builtin.shell: |
+      ansible.builtin.shell: >
         mongosh "mongodb://mongodb-prod.sndp.online:27017/catalogue" /app/db/master-data.js
       args:
         executable: /bin/bash
 
     # ---------------- SYSTEMD ----------------
-
     - name: Copy systemd service file
       ansible.builtin.copy:
-        src: catalouge.service
+        src: catalogue.service
         dest: /etc/systemd/system/catalogue.service
+        owner: root
+        group: root
+        mode: '0644'
 
     - name: Reload systemd
       ansible.builtin.systemd:
