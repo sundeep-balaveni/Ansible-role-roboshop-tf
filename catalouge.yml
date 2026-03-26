@@ -1,13 +1,17 @@
-- name: installing catalouge
-  hosts: catalouge
+- name: Install catalogue
+  hosts: catalogue
   become: yes
 
   tasks:
 
-    - name: Create test file
-      ansible.builtin.file:
-        path: /home/test-file
-        state: touch
+    # ---------------- FIX SSL (CRITICAL) ----------------
+
+    - name: Fix crypto policies (prevents SSL error)
+      ansible.builtin.shell: |
+        update-crypto-policies --set DEFAULT
+        dnf update -y openssl curl libcurl ca-certificates
+      args:
+        executable: /bin/bash
 
     # ---------------- NODEJS ----------------
 
@@ -34,6 +38,8 @@
       ansible.builtin.file:
         path: /app
         state: directory
+        owner: roboshop
+        group: roboshop
         mode: '0755'
 
     # ---------------- APP SETUP ----------------
@@ -58,11 +64,34 @@
       ansible.builtin.npm:
         path: /app
 
+    # ---------------- MONGODB CLIENT ----------------
+
+    - name: Create MongoDB repo file
+      ansible.builtin.copy:
+        dest: /etc/yum.repos.d/mongodb-org-7.0.repo
+        content: |
+          [mongodb-org-7.0]
+          name=MongoDB Repository
+          baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/7.0/x86_64/
+          gpgcheck=0
+          enabled=1
+
+    - name: Install mongosh
+      ansible.builtin.dnf:
+        name: mongodb-mongosh
+        state: present
+
+    - name: Load MongoDB data
+      ansible.builtin.shell: |
+        mongosh "mongodb://mongodb-prod.sndp.online:27017/catalogue" /app/db/master-data.js
+      args:
+        executable: /bin/bash
+
     # ---------------- SYSTEMD ----------------
 
     - name: Copy systemd service file
       ansible.builtin.copy:
-        src: catalouge.service
+        src: files/catalogue.service
         dest: /etc/systemd/system/catalogue.service
 
     - name: Reload systemd
@@ -74,24 +103,3 @@
         name: catalogue
         state: started
         enabled: yes
-
-    # ---------------- MONGODB CLIENT ----------------
-
-    - name: Create MongoDB repo file
-      ansible.builtin.copy:
-        dest: /etc/yum.repos.d/mongodb-org-7.0.repo
-        content: |
-          [mongodb-org-7.0]
-          name=MongoDB Repository
-          baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/7.0/x86_64/
-          gpgcheck=1
-          enabled=1
-          gpgkey=https://www.mongodb.org/static/pgp/server-7.0.asc
-
-    - name: Install mongosh
-      ansible.builtin.dnf:
-        name: mongodb-mongosh
-        state: present
-
-    - name: Load MongoDB data
-      ansible.builtin.shell: mongosh --host mongodb-prod.sndp.online </app/db/master-data.js
