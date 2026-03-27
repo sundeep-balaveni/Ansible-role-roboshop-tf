@@ -1,30 +1,36 @@
-- name: Install catalogue
-  hosts: catalogue
+- name: Install Catalogue Service (RHEL 9)
+  hosts: localhost
+  connection: local
   become: yes
+
+  vars:
+    component: catalogue
 
   tasks:
 
-    # ---------------- FIX SSL (CRITICAL) ----------------
-    - name: Fix crypto policies (prevents SSL error)
-      ansible.builtin.shell: |
-        update-crypto-policies --set DEFAULT
-        dnf update -y openssl curl libcurl ca-certificates
-      args:
-        executable: /bin/bash
+    # ---------------- BASIC SETUP ---------------- #
 
-    # ---------------- NODEJS ----------------
-    - name: Setup NodeJS 20 repo
-      ansible.builtin.shell: curl -sL https://rpm.nodesource.com/setup_20.x | bash -
-      args:
-        creates: /etc/yum.repos.d/nodesource*.repo
+    - name: Create test file
+      ansible.builtin.file:
+        path: /home/test-file
+        state: touch
+
+    # ---------------- NODEJS SETUP ---------------- #
+
+    - name: Disable default NodeJS module
+      ansible.builtin.command: dnf module disable nodejs -y
+
+    - name: Enable NodeJS 20 module
+      ansible.builtin.command: dnf module enable nodejs:20 -y
 
     - name: Install NodeJS
       ansible.builtin.dnf:
         name: nodejs
         state: present
 
-    # ---------------- USER ----------------
-    - name: Create roboshop user
+    # ---------------- USER & DIRECTORY ---------------- #
+
+    - name: Create roboshop system user
       ansible.builtin.user:
         name: roboshop
         system: yes
@@ -35,61 +41,34 @@
       ansible.builtin.file:
         path: /app
         state: directory
-        owner: roboshop
-        group: roboshop
         mode: '0755'
 
-    # ---------------- APP SETUP ----------------
-    - name: Download catalogue zip
+    # ---------------- DOWNLOAD APPLICATION ---------------- #
+
+    - name: Download catalogue application
       ansible.builtin.get_url:
         url: https://roboshop-artifacts.s3.amazonaws.com/catalogue-v3.zip
         dest: /tmp/catalogue.zip
 
-    - name: Install unzip
+    - name: Install unzip package
       ansible.builtin.dnf:
         name: unzip
         state: present
 
-    - name: Unzip catalogue
+    - name: Extract application
       ansible.builtin.unarchive:
         src: /tmp/catalogue.zip
         dest: /app
         remote_src: yes
 
-    - name: Install npm dependencies
-      ansible.builtin.npm:
-        path: /app
-
-    # ---------------- MONGODB CLIENT ----------------
-    - name: Create MongoDB repo file
-      ansible.builtin.copy:
-        dest: /etc/yum.repos.d/mongodb-org-7.0.repo
-        content: |
-          [mongodb-org-7.0]
-          name=MongoDB Repository
-          baseurl=https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/7.0/x86_64/
-          gpgcheck=0
-          enabled=1
-
-    - name: Install mongosh
-      ansible.builtin.dnf:
-        name: mongodb-mongosh
-        state: present
-
-    - name: Clean catalogue database
-      ansible.builtin.shell: >
-        mongosh "mongodb://mongodb-prod.sndp.online:27017/catalogue" --eval "db.products.drop()"
+    - name: Install NodeJS dependencies
+      ansible.builtin.command: npm install
       args:
-        executable: /bin/bash
+        chdir: /app
 
-    - name: Load MongoDB data
-      ansible.builtin.shell: >
-        mongosh "mongodb://mongodb-prod.sndp.online:27017/catalogue" /app/db/master-data.js
-      args:
-        executable: /bin/bash
+    # ---------------- SYSTEMD SERVICE ---------------- #
 
-    # ---------------- SYSTEMD ----------------
-    - name: Copy systemd service file
+    - name: Copy catalogue service file
       ansible.builtin.copy:
         src: catalogue.service
         dest: /etc/systemd/system/catalogue.service
@@ -97,12 +76,27 @@
         group: root
         mode: '0644'
 
-    - name: Reload systemd
+    - name: Reload systemd daemon
       ansible.builtin.systemd:
         daemon_reload: yes
 
-    - name: Start catalogue service
+    - name: Enable and start catalogue service
       ansible.builtin.systemd:
         name: catalogue
         state: started
         enabled: yes
+
+    # ---------------- MONGODB CLIENT ---------------- #
+
+    - name: Copy MongoDB repo file
+      ansible.builtin.copy:
+        src: mongo.repo
+        dest: /etc/yum.repos.d/mongo.repo
+
+    - name: Install MongoDB client (mongosh)
+      ansible.builtin.dnf:
+        name: mongodb-mongosh
+        state: present
+
+    - name: Load MongoDB schema/data
+      ansible.builtin.command: mongosh --host mongo-dev.sndp.online </app/db/master-data.js
