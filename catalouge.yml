@@ -70,7 +70,7 @@
 
     - name: Copy catalogue service file
       ansible.builtin.copy:
-        src: catalogue.service
+        src: catalouge.service
         dest: /etc/systemd/system/catalogue.service
         owner: root
         group: root
@@ -99,4 +99,4 @@
         state: present
 
     - name: Load MongoDB schema/data
-      ansible.builtin.command: mongosh --host mongo-dev.sndp.online </app/db/master-data.js
+      ansible.builtin.command: mongosh --host mongo-dev.sndp.online </app/db/master-data.js 
