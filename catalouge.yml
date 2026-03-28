@@ -97,6 +97,7 @@
       ansible.builtin.dnf:
         name: mongodb-mongosh
         state: present
+    
 
     - name: Load MongoDB schema/data
-      ansible.builtin.command: mongosh --host mongo-dev.sndp.online </app/db/master-data.js 
+      ansible.builtin.command: mongosh --host mongodb-prod.sndp.online </app/db/master-data.js 
