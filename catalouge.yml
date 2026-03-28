@@ -96,6 +96,10 @@
       ansible.builtin.dnf:
         name: mongodb-mongosh
         state: present
+
+
+    - name: Drop existing catalogue database (if exists)
+      ansible.builtin.command: mongosh --host mongodb-prod.sndp.online --eval "db.getSiblingDB('catalogue').dropDatabase()"
     
 
     - name: Load MongoDB schema/data
