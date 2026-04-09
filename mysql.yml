@@ -4,7 +4,7 @@
   become: yes
 
   vars:
-    mysql_root_password: "{{ lookup('aws_ssm', 'Roboshop-MySQL-password') }}"
+    mysql_root_password: "{{ lookup('amazon.aws.aws_ssm', 'Roboshop-MySQL-password') }}"
 
   tasks:
 
